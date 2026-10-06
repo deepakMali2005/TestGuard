@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Storefront & Pricing Engine</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-badge">TG</span>
+                <h1>TestGuard Storefront</h1>
+            </div>
+            <div class="customer-selector">
+                <label for="customerTier">Active Customer:</label>
+                <select id="customerTier">
+                    <option value="C_PREMIUM">Alice Walker (Premium Tier)</option>
+                    <option value="C_REGULAR">Bob Smith (Regular Tier)</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="catalog-section">
+            <div class="section-header">
+                <h2>Product Catalog</h2>
+                <span class="badge" id="catalogCount">Loading products...</span>
+            </div>
+            <div class="products-grid" id="productsGrid">
+                <!-- Products injected by JS -->
+            </div>
+        </div>
+
+        <aside class="cart-section">
+            <div class="cart-card">
+                <h2>Your Cart</h2>
+                <div class="cart-items" id="cartItemsList">
+                    <p class="empty-state">Your cart is empty. Add items from the catalog.</p>
+                </div>
+
+                <div class="pricing-breakdown" id="pricingBreakdown">
+                    <div class="price-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotalAmount">₹0.00</span>
+                    </div>
+                    <div class="price-row discount-row" id="discountRow">
+                        <span>Loyalty Discount:</span>
+                        <span id="discountAmount">- ₹0.00</span>
+                    </div>
+                    <div class="price-row total-row">
+                        <span>Total Due:</span>
+                        <span id="totalAmount">₹0.00</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="checkoutBtn" disabled>
+                    Place Order (Persist to DB)
+                </button>
+
+                <div class="order-notification" id="orderNotification"></div>
+            </div>
+
+            <div class="rule-card">
+                <h3>Current Discount Policy (SRS)</h3>
+                <ul>
+                    <li><strong>R1</strong>: Premium gets 20% discount if order &gt; ₹1000.</li>
+                    <li><strong>R2</strong>: Premium gets no discount if order == ₹1000.</li>
+                    <li><strong>R3</strong>: Premium gets no discount if order &lt; ₹1000.</li>
+                    <li><strong>R4</strong>: Non-premium gets no discount regardless of amount.</li>
+                </ul>
+            </div>
+        </aside>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
