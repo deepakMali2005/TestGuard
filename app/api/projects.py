@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (
     AgentStateResponse,
+    AgentStepResponse,
     Analysis,
     ApplyRequest,
     CreateProjectRequest,
@@ -204,29 +205,69 @@ def get_report(project_id: str):
 
 @router.post(
     "/{project_id}/agent",
-    response_model=AgentStateResponse,
+    response_model=AgentStepResponse,
 )
 def agent_step(project_id: str):
     project = get_project_or_404(project_id)
 
-    state = project.agent_state
-
-    return AgentStateResponse(
-        status=state.status,
-        iteration=state.iteration,
-        max_iterations=state.max_iterations,
-        awaiting_approval=state.awaiting_approval,
-        steps=[
-            {
-                "step": step.step,
-                "action": step.action,
-                "observation": step.observation,
-                "reasoning": step.reasoning,
-                "next_action": step.next_action,
-            }
-            for step in state.steps
-        ],
+    orchestrator = TestGuardOrchestrator(
+        project
     )
+
+    try:
+        result = orchestrator.run_agent_step()
+
+        state = project.agent_state
+
+        return AgentStepResponse(
+            action=result["action"],
+            observation=result["observation"],
+            reasoning=result["reasoning"],
+            result=result["result"],
+            agent_state=AgentStateResponse(
+                status=state.status,
+                iteration=state.iteration,
+                max_iterations=state.max_iterations,
+                awaiting_approval=state.awaiting_approval,
+                steps=[
+                    {
+                        "step": step.step,
+                        "action": step.action,
+                        "observation": step.observation,
+                        "reasoning": step.reasoning,
+                        "next_action": step.next_action,
+                    }
+                    for step in state.steps
+                ],
+            ),
+        )
+
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except (
+        FileNotFoundError,
+        NotADirectoryError,
+    ) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(
