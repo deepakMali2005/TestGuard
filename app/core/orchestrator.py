@@ -230,11 +230,14 @@ class TestGuardOrchestrator:
 
             applied.append(str(proposal.file))
 
-        self.project.changes.extend(applied)
+            self.project.changes.extend(applied)
 
-        self.agent.approve()
+            self.agent.approve()
 
-        return applied
+            analysis.status = "CHANGES_APPLIED"
+            self.project.analysis = analysis
+
+            return applied
 
     def reject_changes(self) -> None:
         """
@@ -489,23 +492,8 @@ class TestGuardOrchestrator:
         if action == "request_approval":
             analysis = self._require_analysis()
 
-            if not analysis.proposals:
-                return self.agent.observe_proposals(
-                    proposal_count=0
-                )
-
-            self.agent.request_approval()
-
-            return AgentDecision(
-                action="request_approval",
-                observation=(
-                    f"{len(analysis.proposals)} proposal(s) require "
-                    "explicit human approval."
-                ),
-                reasoning=(
-                    "TestGuard never mutates the repository without "
-                    "approval."
-                ),
+            return self.agent.observe_proposals(
+                proposal_count=len(analysis.proposals)
             )
 
         if action == "apply_approved_changes":
