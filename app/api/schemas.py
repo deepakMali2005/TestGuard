@@ -106,6 +106,14 @@ class AgentStateResponse(BaseModel):
     steps: list[AgentStep] = []
 
 
+class AgentStepResponse(BaseModel):
+    action: str
+    observation: str
+    reasoning: str
+    result: Any
+    agent_state: AgentStateResponse
+
+
 class Report(BaseModel):
     project: dict[str, Any]
     analysis: Analysis | None = None
