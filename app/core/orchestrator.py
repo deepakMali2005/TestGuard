@@ -50,6 +50,15 @@ class TestGuardOrchestrator:
     # Bounded tools
     # ------------------------------------------------------------------
 
+    def analyze(self) -> Analysis:
+        """
+        Inspect the repository and analyze tests against the requirements baseline.
+        """
+        analysis = self.analyze_repository()
+        if not analysis.srs_found:
+            return analysis
+        return self.analyze_tests()
+
     def analyze_repository(self) -> Analysis:
         """
         Inspect the repository and establish the requirements baseline.
