@@ -1,3 +1,4 @@
+import ast
 import json
 from pathlib import Path
 
@@ -62,12 +63,15 @@ class TestGenerator:
                 context=context,
             )
         except RuntimeError as exc:
-            print(f"[TestGuard] LLM test generation unavailable: {exc}")
+            print(
+                f"[TestGuard] LLM test generation unavailable: {exc}"
+            )
             return []
 
         return self._parse_response(
             response=response,
             test_file=target_test.file,
+            requirements=uncovered_requirements,
         )
 
     def _requirement_is_already_covered(
@@ -103,9 +107,13 @@ Rules:
 6. Keep the tests focused and small.
 7. Do not modify production code.
 8. Do not use shell commands, subprocesses, network calls or file access.
-9. The proposal must target the existing test file:
+9. Do not assert an error message, exception text, return field, or other
+   implementation detail unless that exact behavior is explicitly stated
+   in the SRS.
+10. Never invent unspecified behavior merely to make a test stronger.
+11. The proposal must target the existing test file:
    {test_file}
-10. The existing target function is:
+12. The existing target function is:
    {target}
 
 Return ONLY valid JSON in this exact structure:
@@ -191,7 +199,8 @@ If no useful test can be generated, return:
 
         for path in repository_root.rglob("*.py"):
             if any(
-                part in {
+                part
+                in {
                     ".git",
                     ".venv",
                     "venv",
@@ -231,40 +240,71 @@ If no useful test can be generated, return:
         self,
         response: str,
         test_file: str,
+        requirements,
     ) -> list[TestProposal]:
         try:
             data = json.loads(response)
         except json.JSONDecodeError:
             return []
 
-        proposals = data.get("proposals", [])
+        proposals = data.get(
+            "proposals",
+            [],
+        )
 
-        if not isinstance(proposals, list):
+        if not isinstance(
+            proposals,
+            list,
+        ):
             return []
 
         result = []
 
         for item in proposals:
-            if not isinstance(item, dict):
+            if not isinstance(
+                item,
+                dict,
+            ):
                 continue
 
-            description = item.get("description")
-            code = item.get("code")
+            description = item.get(
+                "description"
+            )
+
+            code = item.get(
+                "code"
+            )
+
             categories = item.get(
                 "finding_categories",
                 [],
             )
 
-            if not isinstance(description, str):
+            if not isinstance(
+                description,
+                str,
+            ):
                 continue
 
-            if not isinstance(code, str):
+            if not isinstance(
+                code,
+                str,
+            ):
                 continue
 
             if not code.strip():
                 continue
 
-            if not isinstance(categories, list):
+            if not self._is_safe_proposal(
+                code,
+                requirements,
+            ):
+                continue
+
+            if not isinstance(
+                categories,
+                list,
+            ):
                 categories = []
 
             # The model never chooses the target file.
@@ -277,9 +317,66 @@ If no useful test can be generated, return:
                     finding_categories=[
                         category
                         for category in categories
-                        if isinstance(category, str)
+                        if isinstance(
+                            category,
+                            str,
+                        )
                     ],
                 )
             )
 
         return result
+
+    def _is_safe_proposal(
+        self,
+        code: str,
+        requirements,
+    ) -> bool:
+        """
+        Reject proposals that assert unspecified exception messages.
+
+        The SRS is the source of truth. A generated test must not
+        strengthen the contract by asserting implementation details
+        that the requirement never specified.
+        """
+
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return False
+
+        specified_text = " ".join(
+            requirement.description
+            for requirement in requirements
+        ).lower()
+
+        for node in ast.walk(tree):
+            if not isinstance(
+                node,
+                ast.Call,
+            ):
+                continue
+
+            for keyword in node.keywords:
+                if (
+                    keyword.arg != "match"
+                    or not isinstance(
+                        keyword.value,
+                        ast.Constant,
+                    )
+                ):
+                    continue
+
+                if not isinstance(
+                    keyword.value.value,
+                    str,
+                ):
+                    return False
+
+                if (
+                    keyword.value.value.lower()
+                    not in specified_text
+                ):
+                    return False
+
+        return True

@@ -39,7 +39,9 @@ class RequirementAnalyzer:
         requirements: list[Requirement] = []
 
         for requirement_id, description in matches:
-            cleaned = self._clean_description(description)
+            cleaned = self._clean_description(
+                description
+            )
 
             if not cleaned:
                 continue
@@ -64,7 +66,10 @@ class RequirementAnalyzer:
 
         requirements: list[Requirement] = []
 
-        for index, sentence in enumerate(sentences, start=1):
+        for index, sentence in enumerate(
+            sentences,
+            start=1,
+        ):
             cleaned = sentence.strip()
 
             if not cleaned:
@@ -84,10 +89,18 @@ class RequirementAnalyzer:
         requirement_id: str,
         description: str,
     ) -> Requirement:
-        conditions = self._extract_conditions(description)
-        boundaries = self._extract_boundaries(description)
-        expected_behavior = self._extract_expected_behavior(
+        conditions = self._extract_conditions(
             description
+        )
+
+        boundaries = self._extract_boundaries(
+            description
+        )
+
+        expected_behavior = (
+            self._extract_expected_behavior(
+                description
+            )
         )
 
         return Requirement(
@@ -120,9 +133,14 @@ class RequirementAnalyzer:
             )
 
             for match in matches:
-                cleaned = match.strip(" .,:;")
+                cleaned = match.strip(
+                    " .,:;"
+                )
 
-                if cleaned and cleaned not in conditions:
+                if (
+                    cleaned
+                    and cleaned not in conditions
+                ):
                     conditions.append(cleaned)
 
         return conditions
@@ -145,17 +163,15 @@ class RequirementAnalyzer:
         ]
 
         for pattern in boundary_patterns:
-            if re.search(
+            match = re.search(
                 pattern,
                 description,
                 flags=re.IGNORECASE,
-            ):
+            )
+
+            if match:
                 boundaries.append(
-                    re.search(
-                        pattern,
-                        description,
-                        flags=re.IGNORECASE,
-                    ).group(0)
+                    match.group(0)
                 )
 
         numbers = re.findall(
@@ -177,20 +193,21 @@ class RequirementAnalyzer:
     ) -> str:
         lowered = description.lower()
 
-        if "no discount" in lowered:
-            return "no discount"
-
-        if "discount" in lowered:
-            return "discount applied"
-
-        if "reject" in lowered or "rejected" in lowered:
+        if (
+            "reject" in lowered
+            or "rejected" in lowered
+            or "deny" in lowered
+            or "denied" in lowered
+        ):
             return "request rejected"
 
-        if "error" in lowered or "exception" in lowered:
+        if (
+            "error" in lowered
+            or "exception" in lowered
+            or "fail" in lowered
+            or "failure" in lowered
+        ):
             return "error expected"
-
-        if "return" in lowered:
-            return description
 
         return description
 
